@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading App - Login/Register</title>
+    
+    <style>
+        :root { --primary-light: #f0f0f5; --secondary-purple: #9060eb; --bg-purple: #e0e0f8; --text-dark: #333333; --text-light: #ffffff; --soft-shadow: 5px 5px 10px rgba(0, 0, 0, 0.1), -5px -5px 10px rgba(255, 255, 255, 0.8); --inset-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-purple); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .app-frame { width: 100%; max-width: 380px; height: 800px; background-color: var(--primary-light); border-radius: 40px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+        
+        /* Login/Register Specific Styles */
+        #login-register-page { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; background-color: var(--primary-light); }
+        .auth-form-container { width: 85%; max-width: 320px; background-color: var(--primary-light); padding: 30px 20px; border-radius: 20px; box-shadow: var(--soft-shadow); }
+        .auth-form-container h2 { color: var(--secondary-purple); margin-bottom: 20px; }
+        .modal-input { width: 80%; padding: 10px; margin: 10px 0; border: none; border-radius: 8mm; box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1); text-align: center; }
+        .modal-btn { background-color: var(--secondary-purple); color: white; border: none; padding: 10px 20px; border-radius: 10px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="app-frame">
+        
+        <div id="login-register-page"> 
+            <div class="auth-form-container" id="loginFormContainer">
+                <h2>Login</h2>
+                <form id="loginForm" onsubmit="event.preventDefault(); login();">
+                    <input type="email" id="loginEmail" class="modal-input" placeholder="Email" required>
+                    <input type="password" id="loginPassword" class="modal-input" placeholder="Password" required>
+                    <button type="submit" class="modal-btn" style="width: 80%; margin-top: 10px;">Log In</button>
+                    <p style="font-size: 12px; margin-top: 15px;">Don't have an account? <a href="#" onclick="showRegisterPage()">Register</a></p>
+                    <p id="loginMessage" style="color: red; margin-top: 10px;"></p>
+                </form>
+            </div>
+            
+            <div class="auth-form-container" id="registerFormContainer" style="display: none; margin-top: 20px;">
+                <h2>Register</h2>
+                <form id="registerForm" onsubmit="event.preventDefault(); register();">
+                    <input type="text" id="registerName" class="modal-input" placeholder="Full Name" required>
+                    <input type="email" id="registerEmail" class="modal-input" placeholder="Email" required>
+                    <input type="password" id="registerPassword" class="modal-input" placeholder="Password (Min 6 chars)" required minlength="6">
+                    <input type="text" id="registerReferralId" class="modal-input" placeholder="Referral ID (Optional)">
+                    <button type="submit" class="modal-btn" style="width: 80%; margin-top: 10px;">Register</button>
+                    <p style="font-size: 12px; margin-top: 15px;">Already have an account? <a href="#" onclick="showLoginPage()">Log In</a></p>
+                    <p id="registerMessage" style="color: red; margin-top: 10px;"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Local Storage Helper Functions ---
+        function getAppData() {
+            const defaultData = {
+                users: {},
+                config: { trc20Address: 'TRC20_DEMO_ADDRESS', telegramLink: 'https://t.me/demo_channel', earningProfitRate: 50, earningTime: '30 Days', referralCommission: 0.50, bkashNumber: '01XXXXXXXXX', nagadNumber: '01XXXXXXXXX' },
+                transactions: {},
+                earnings: {},
+                nextTransactionId: 1
+            };
+            return JSON.parse(localStorage.getItem('appData')) || defaultData;
+        }
+
+        function saveAppData(data) {
+            localStorage.setItem('appData', JSON.stringify(data));
+        }
+        
+        // জিমেইলকে একটি ডামি ইউজার আইডি-তে পরিবর্তন করার ফাংশন
+        function emailToUid(email) {
+            return 'user_' + btoa(email.toLowerCase()).replace(/=/g, '').substring(0, 10);
+        }
+        
+        // ইমেইল থেকে রেফারেল আইডি জেনারেট
+        function emailToReferralId(email) {
+             return email.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 8);
+        }
+
+        // --- Auth Functions ---
+        function showLoginPage() {
+             document.getElementById('loginFormContainer').style.display = 'block';
+             document.getElementById('registerFormContainer').style.display = 'none';
+             document.getElementById('loginMessage').textContent = '';
+             document.getElementById('registerMessage').textContent = '';
+        }
+
+        function showRegisterPage() {
+             document.getElementById('loginFormContainer').style.display = 'none';
+             document.getElementById('registerFormContainer').style.display = 'block';
+             document.getElementById('loginMessage').textContent = '';
+             document.getElementById('registerMessage').textContent = '';
+        }
+
+        function register() {
+             const name = document.getElementById('registerName').value;
+             const email = document.getElementById('registerEmail').value;
+             const password = document.getElementById('registerPassword').value;
+             const referredBy = document.getElementById('registerReferralId').value.trim() || null;
+             const messageEl = document.getElementById('registerMessage');
+
+             let appData = getAppData();
+             const newUserId = emailToUid(email);
+
+             if (appData.users[newUserId]) {
+                 messageEl.textContent = "❌ This email is already registered. Please log in.";
+                 return;
+             }
+
+             const newReferralId = emailToReferralId(email);
+
+             const newUser = {
+                 name,
+                 email,
+                 password, 
+                 userId: newUserId,
+                 referralId: newReferralId,
+                 referredBy,
+                 balance: 0.00,
+                 unclaimedReferral: 0.00,
+                 referralCount: 0
+             };
+
+             appData.users[newUserId] = newUser;
+             saveAppData(appData);
+
+             alert("✅ Registration successful! Please log in.");
+             showLoginPage();
+        }
+
+        function login() {
+             const email = document.getElementById('loginEmail').value;
+             const password = document.getElementById('loginPassword').value;
+             const messageEl = document.getElementById('loginMessage');
+
+             const appData = getAppData();
+             const targetUserId = emailToUid(email);
+             const user = appData.users[targetUserId];
+
+             if (user && user.password === password) {
+                 // লগইন সফল হলে, userToken Local Storage-এ সেভ করা হচ্ছে
+                 localStorage.setItem('userToken', targetUserId); 
+                 // ইউজারকে ড্যাশবোর্ড পেজে রিডাইরেক্ট করা হচ্ছে
+                 window.location.href = 'dashboard.html'; 
+             } else {
+                 messageEl.textContent = "❌ Invalid email or password.";
+             }
+        }
+
+        // --- Initializer ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // যদি userToken থাকে, তাহলে সরাসরি ড্যাশবোর্ডে রিডাইরেক্ট করুন
+            if (localStorage.getItem('userToken')) {
+                window.location.href = 'dashboard.html';
+            }
+            
+            // রেফারেল আইডি যদি URL-এ থাকে, তবে রেজিস্ট্রেশন ফর্মে লোড করুন
+            const urlParams = new URLSearchParams(window.location.search);
+            const refId = urlParams.get('ref');
+            if (refId) {
+                showRegisterPage();
+                document.getElementById('registerReferralId').value = refId;
+                alert(`You were referred by: ${refId}. Register now!`);
+            } else {
+                showLoginPage();
+            }
+        });
+    </script>
+</body>
+</html>
