@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading App Dashboard</title>
+    
+    <style>
+        :root { --primary-light: #f0f0f5; --secondary-purple: #9060eb; --bg-purple: #e0e0f8; --text-dark: #333333; --text-light: #ffffff; --soft-shadow: 5px 5px 10px rgba(0, 0, 0, 0.1), -5px -5px 10px rgba(255, 255, 255, 0.8); --inset-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-purple); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .app-frame { width: 100%; max-width: 380px; height: 800px; background-color: var(--primary-light); border-radius: 40px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+        
+        /* Dashboard Header FIX */
+        .header { padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; color: var(--text-dark); background-color: white; }
+        .header-left { font-weight: 600; font-size: 16px; color: var(--secondary-purple); }
+        .profile-pic { width: 30px; height: 30px; background-color: var(--secondary-purple); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 16px; color: white; cursor: pointer; }
+        
+        /* Main Content - Centering the Card */
+        .main-content { flex-grow: 1; padding: 0 30px; overflow-y: auto; display: flex; justify-content: center; align-items: center; flex-direction: column; } 
+        .section-card { background-color: var(--secondary-purple); color: var(--text-light); padding: 20px; border-radius: 30px; box-shadow: 0 10px 20px rgba(144, 96, 235, 0.4); text-align: center; width: 100%; max-width: 300px;}
+        .all-buttons-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px 15px; margin-top: 20px; padding: 10px; }
+        .app-btn { text-align: center; cursor: pointer; width: 90px; }
+        .app-btn span { font-size: 30px; background-color: rgba(255,255,255,0.2); border-radius: 50%; padding: 15px; display: inline-block; transition: all 0.2s; }
+        .app-btn p { margin-top: 5px; font-weight: 600; font-size: 14px; }
+        
+        /* Modal Styles */
+        .modal { display: none; position: absolute; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); justify-content: center; align-items: center; }
+        .modal-content { background-color: var(--primary-light); margin: 15% auto; padding: 20px; border-radius: 15px; width: 80%; max-width: 300px; color: var(--text-dark); text-align: center; }
+        .close-btn { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-btn { background-color: var(--secondary-purple); color: white; border: none; padding: 10px 20px; border-radius: 10px; margin: 5px; cursor: pointer; }
+        .modal-input { width: 80%; padding: 10px; margin: 10px 0; border: none; border-radius: 8mm; box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1); text-align: center; }
+        .claim-btn { background-color: #2ecc71; }
+        .referral-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+        .referral-list-item button { padding: 5px 10px; font-size: 12px; }
+        .select-payment { width: 90%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="app-frame">
+        <div class="dashboard" id="userApp">
+            
+            <div class="header">
+                <div class="header-left" id="currentBalance">$0.00</div>
+                <div class="profile-pic" onclick="openModal('profileModal')">&#x1f464;</div>
+            </div>
+            
+            <div class="main-content">
+                <div class="section-card">
+                    <h3 style="margin-bottom: 0;">Access</h3>
+                    
+                    <div class="all-buttons-container">
+                        <div class="app-btn" onclick="openModal('tradingChartPage')"> <span>&#x1f4c8;</span> <p>Trading Chart</p> </div>
+                        <div class="app-btn" onclick="openModal('walletModal')"> <span>&#x1f4b3;</span> <p>Wallet</p> </div>
+                        <div class="app-btn" onclick="openModal('leaderboardModal')"> <span>&#x1f3c6;</span> <p>Leaderboard</p> </div>
+                        <div class="app-btn" onclick="openModal('rewardModal')"> <span>&#x1f381;</span> <p>Daily Reward</p> </div>
+                        <div class="app-btn" onclick="openModal('earningModal')"> <span>&#x1f4b8;</span> <p>Earning</p> </div>
+                        <div class="app-btn" onclick="openModal('profileModal')"> <span>&#x1f464;</span> <p>Profile</p> </div>
+                        <div class="app-btn" onclick="openModal('referModal')"> <span>&#x1f465;</span> <p>Refer</p> </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="walletModal" class="modal"> 
+                <div class="modal-content"> 
+                    <span class="close-btn" onclick="closeModal('walletModal')">&times;</span> 
+                    <h2>Wallet</h2> <h3 id="walletBalance">$0.00</h3> 
+                    <hr><h4>Deposit (TRC20/Local)</h4>
+                    <select id="depositMethod" class="select-payment" onchange="updateDepositAddress()"> 
+                        <option value="TRC20">TRC20 (Crypto)</option> 
+                        <option value="BKASH">BKASH (Local)</option> 
+                        <option value="NAGAD">NAGAD (Local)</option> 
+                    </select>
+                    <p id="depositAddress">Loading Address...</p>
+                    <input type="number" id="depositAmount" class="modal-input" placeholder="Amount (USD)"><button class="modal-btn" onclick="confirmDeposit()">Confirm Deposit</button>
+                    <hr><h4>Withdraw (TRC20/Local)</h4>
+                    <select id="withdrawMethod" class="select-payment"> 
+                        <option value="TRC20">TRC20 (Crypto)</option> 
+                        <option value="BKASH">BKASH (Local)</option> 
+                        <option value="NAGAD">NAGAD (Local)</option> 
+                    </select>
+                    <input type="text" id="withdrawAddress" class="modal-input" placeholder="Your Address/Number">
+                    <input type="number" id="withdrawAmount" class="modal-input" placeholder="Amount (USD)"><button class="modal-btn" onclick="confirmWithdraw()">Confirm Withdraw</button>
+                </div> 
+            </div>
+            <div id="leaderboardModal" class="modal"> <div class="modal-content"> <span class="close-btn" onclick="closeModal('leaderboardModal')">&times;</span> <h2>Leaderboard</h2> <p>Live data from DB</p> </div> </div>
+            <div id="rewardModal" class="modal"> <div class="modal-content"> <span class="close-btn" onclick="closeModal('rewardModal')">&times;</span> <h2>Daily Reward</h2> <p id="rewardStatus">Checking for reward...</p> <p style="color:#9060eb;" id="rewardReasonText">কারণ: N/A</p> <h3 style="color:#2ecc71;" id="rewardAmountText">$0.00</h3> <button class="modal-btn claim-btn" id="claimButton" onclick="claimReward()" style="display:none;">CLAIM</button> </div> </div>
+            <div id="earningModal" class="modal"> <div class="modal-content"> <span class="close-btn" onclick="closeModal('earningModal')">&times;</span> <h2>Earning Plan</h2> <p style="font-size: 14px; color: #555;">আপনার টাকাটি আমাদের কাছে সুরক্ষিত।</p> <p style="font-weight: 600;" id="earningProfitText">Loading Profit Rate...</p> <input type="number" id="submitAmount" class="modal-input" placeholder="Amount to Submit ($)" value="100"> <button class="modal-btn" onclick="submitEarningPlan()">SUBMIT</button> </div> </div>
+            <div id="tradingChartPage" class="modal"> <div class="modal-content" style="max-width: 90%; height: 80%; background-color: #1a2228; padding: 5px;"> <span class="close-btn" onclick="closeModal('tradingChartPage')" style="color:white; z-index: 10;">&times;</span> <h2 style="color:white; margin: 5px;">Trading Chart</h2> <div class="tradingview-widget-container" style="height:90%; width:100%;"><div id="tradingview_chart_embed" style="height:100%;"></div><script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script><script type="text/javascript">function initializeTradingViewEmbed() { new TradingView.widget({ "width": "100%", "height": "100%", "symbol": "BINANCE:BTCUSDT", "interval": "5", "timezone": "Etc/UTC", "theme": "dark", "style": "1", "locale": "en", "toolbar_bg": "#1a2228", "enable_publishing": false, "hide_top_toolbar": true, "allow_symbol_change": true, "container_id": "tradingview_chart_embed" }); } document.addEventListener('DOMContentLoaded', initializeTradingViewEmbed);</script></div> </div> </div>
+            <div id="profileModal" class="modal"> <div class="modal-content"> <span class="close-btn" onclick="closeModal('profileModal')">&times;</span> <h2>Profile</h2> <p id="profileName">Loading Name...</p> <p id="profileEmail">Loading Email...</p> <p id="profileReferralId">Referral ID: N/A</p> <button class="modal-btn" onclick="logout()">Logout</button> </div> </div>
+            <div id="referModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-btn" onclick="closeModal('referModal')">&times;</span>
+                    <h2>Referral System</h2>
+                    <p style="color:#e74c3c; font-weight: bold;">Note: No deposit required!</p>
+                    <p id="referLinkText" style="word-break: break-all;">Your Link: Loading...</p>
+                    <p id="referTelegramText">Telegram: Loading...</p>
+                    <p style="margin-top: 15px;">**Your Referrals (<span id="referralCount">0</span>)**</p>
+                    <ul id="referralList" style="text-align: left; max-height: 200px; overflow-y: auto;">
+                        </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Local Storage Helper Functions ---
+        function getAppData() {
+            // ডিফল্ট ডেটা যা রেজিস্ট্রেশন ফাইলেও আছে
+            const defaultData = { users: {}, config: { trc20Address: 'TRC20_DEMO_ADDRESS', telegramLink: 'https://t.me/demo_channel', earningProfitRate: 50, earningTime: '30 Days', referralCommission: 0.50, bkashNumber: '01XXXXXXXXX', nagadNumber: '01XXXXXXXXX' }, transactions: {}, earnings: {}, nextTransactionId: 1 };
+            return JSON.parse(localStorage.getItem('appData')) || defaultData;
+        }
+
+        function saveAppData(data) {
+            localStorage.setItem('appData', JSON.stringify(data));
+        }
+        
+        // --- Global State & Init ---
+        let userId = localStorage.getItem('userToken');
+        let currentBalance = 0;
+        let appConfig = {};
+        let currentUserData = {};
+
+        function checkAuth() {
+            // যদি userToken না থাকে, লগইন পেজে রিডাইরেক্ট করুন
+            if (!userId) {
+                alert("Please log in first.");
+                window.location.href = 'index.html'; 
+            }
+        }
+
+        function updateBalanceUI() {
+            document.getElementById('currentBalance').textContent = `$${currentBalance.toFixed(2)}`;
+            const walletBalance = document.getElementById('walletBalance');
+            if(walletBalance) walletBalance.textContent = `$${currentBalance.toFixed(2)}`;
+        }
+
+        function renderDashboard() {
+            checkAuth(); // অথেন্টিকেশন চেক করুন
+            
+            let appData = getAppData();
+            currentUserData = appData.users[userId];
+            appConfig = appData.config;
+
+            if (!currentUserData) { 
+                 // যদি Local Storage-এ ইউজার ডেটা না পায়, আবার লগআউট করে দিন
+                 logout();
+                 return;
+            }
+
+            currentBalance = currentUserData.balance || 0;
+            updateBalanceUI();
+            
+            // Profile Update
+            document.getElementById('profileName').textContent = currentUserData.name || 'N/A';
+            document.getElementById('profileEmail').textContent = currentUserData.email || 'N/A';
+            document.getElementById('profileReferralId').textContent = `Referral ID: ${currentUserData.referralId || 'N/A'}`;
+            
+            // Daily Reward Status
+            const profitRate = appConfig.earningProfitRate || 50;
+            const earningTime = appConfig.earningTime || '30 Days';
+            
+            document.getElementById('earningProfitText').textContent = `$100 সাবমিট করলে $${(100 * (1 + profitRate / 100)).toFixed(2)} প্রফিট পাবেন ${earningTime}-এর মধ্যে (${profitRate}% Profit)`;
+
+            if (currentUserData.pendingReward && currentUserData.pendingReward.amount > 0) {
+                document.getElementById('rewardStatus').textContent = "Pending Reward!";
+                document.getElementById('rewardReasonText').textContent = currentUserData.pendingReward.reason;
+                document.getElementById('rewardAmountText').textContent = `$${currentUserData.pendingReward.amount.toFixed(2)}`;
+                document.getElementById('claimButton').style.display = 'block';
+            } else {
+                document.getElementById('rewardStatus').textContent = "No pending reward.";
+                document.getElementById('rewardReasonText').textContent = "কারণ: N/A";
+                document.getElementById('rewardAmountText').textContent = "$0.00";
+                document.getElementById('claimButton').style.display = 'none';
+            }
+        }
+        
+        // --- Wallet & Transaction Logic (unchanged) ---
+        function updateDepositAddress() {
+            const method = document.getElementById('depositMethod').value;
+            let address = '';
+            if (method === 'TRC20') address = appConfig.trc20Address || 'Not Set';
+            if (method === 'BKASH') address = appConfig.bkashNumber || 'Not Set';
+            if (method === 'NAGAD') address = appConfig.nagadNumber || 'Not Set';
+            document.getElementById('depositAddress').textContent = address;
+        }
+        
+        function confirmDeposit() {
+             const amount = parseFloat(document.getElementById('depositAmount').value);
+             const method = document.getElementById('depositMethod').value;
+             const address = document.getElementById('depositAddress').textContent;
+
+             if (amount <= 0 || address === 'Not Set') { alert("Invalid amount or Admin has not set the address/number."); return; }
+             if (!confirm(`Confirm Deposit of $${amount} via ${method} to ${address}?`)) return;
+             
+             let appData = getAppData();
+             const transactionId = 'tx_' + appData.nextTransactionId++;
+             appData.transactions[transactionId] = { userId, type: 'deposit', amount, status: 'pending', createdAt: Date.now(), userEmail: currentUserData.email, method };
+             appData.nextTransactionId++;
+             saveAppData(appData);
+             
+             alert("Deposit request sent. Please complete the transfer to the displayed address/number and wait for Admin approval.");
+             closeModal('walletModal');
+             renderDashboard();
+        }
+
+        function confirmWithdraw() {
+             const amount = parseFloat(document.getElementById('withdrawAmount').value);
+             const address = document.getElementById('withdrawAddress').value;
+             const method = document.getElementById('withdrawMethod').value;
+
+             if (amount <= 0 || currentBalance < amount || address.length < 5) { alert("Invalid amount, insufficient balance, or invalid number/address."); return; }
+
+             let appData = getAppData();
+             
+             appData.users[userId].balance -= amount;
+             
+             const transactionId = 'tx_' + appData.nextTransactionId++;
+             appData.transactions[transactionId] = { userId, type: 'withdraw', amount, status: 'pending', address, createdAt: Date.now(), userEmail: currentUserData.email, method };
+             appData.nextTransactionId++;
+             saveAppData(appData);
+             
+             alert("Withdrawal request sent. Wait for Admin approval.");
+             closeModal('walletModal');
+             renderDashboard(); 
+        }
+
+        // --- Referral Logic ---
+        function renderReferralModal() {
+            let appData = getAppData();
+            const user = currentUserData;
+            
+            document.getElementById('referLinkText').textContent = `Your Link: ${window.location.origin}/index.html?ref=${user.referralId}`;
+            document.getElementById('referTelegramText').innerHTML = `Telegram: <a href="${appConfig.telegramLink || '#'}">Join Here</a>`;
+            
+            let referralCount = 0;
+            const listEl = document.getElementById('referralList');
+            listEl.innerHTML = `<li>Note: Per successful referral, Admin sets commission for the referral's first deposit.</li>`;
+            
+            let hasReferrals = false;
+            for (const uid in appData.users) {
+                if (appData.users[uid].referredBy === user.referralId) {
+                    referralCount++;
+                    hasReferrals = true;
+                    const ref = appData.users[uid];
+                    const li = document.createElement('li');
+                    
+                    let claimButton = '';
+                    if (ref.unclaimedReferral > 0) {
+                         claimButton = `<button class="claim-btn" onclick="claimReferralBonus('${ref.email}')">Claim $${ref.unclaimedReferral.toFixed(2)}</button>`;
+                    }
+
+                    li.classList.add('referral-list-item');
+                    li.innerHTML = `<span>${ref.name || ref.email}</span> ${claimButton}`;
+                    listEl.appendChild(li);
+                }
+            }
+            document.getElementById('referralCount').textContent = referralCount;
+            if(!hasReferrals) { listEl.innerHTML += '<li>No one has registered using your link yet.</li>'; }
+        }
+
+        function claimReferralBonus(referredEmail) {
+            let appData = getAppData();
+            let referredUserKey = Object.keys(appData.users).find(key => appData.users[key].email === referredEmail);
+            let referredUser = appData.users[referredUserKey];
+            let user = appData.users[userId];
+
+            if (referredUser && referredUser.unclaimedReferral > 0) {
+                const bonus = referredUser.unclaimedReferral;
+                user.balance += bonus;
+                referredUser.unclaimedReferral = 0;
+
+                saveAppData(appData);
+                alert(`$${bonus.toFixed(2)} referral bonus claimed!`);
+                renderDashboard();
+                openModal('referModal'); 
+            }
+        }
+        
+        // --- UI/Helper Functions ---
+        function logout() {
+            localStorage.removeItem('userToken');
+            // লগআউট করে লগইন পেজে রিডাইরেক্ট করুন
+            window.location.href = 'index.html';
+        }
+        
+        function openModal(modalId) {
+            if (modalId === 'referModal') renderReferralModal();
+            if (modalId === 'walletModal') {
+                updateDepositAddress(); 
+                document.getElementById('depositMethod').onchange = updateDepositAddress;
+            }
+            document.getElementById(modalId).style.display = 'flex';
+        }
+        function closeModal(modalId) { document.getElementById(modalId).style.display = "none"; }
+        
+        function submitEarningPlan() {
+            const amount = parseFloat(document.getElementById('submitAmount').value);
+            if (isNaN(amount) || amount <= 0 || currentBalance < amount) { alert(currentBalance < amount ? "Insufficient Balance." : "Invalid amount."); return; }
+            
+            let appData = getAppData();
+            
+            appData.users[userId].balance -= amount;
+            
+            appData.earnings['earn_' + appData.nextTransactionId++] = { userId, amount, status: 'active', createdAt: Date.now(), userEmail: currentUserData.email };
+            appData.nextTransactionId++;
+            saveAppData(appData);
+            
+            alert(`$${amount.toFixed(2)} submitted!`);
+            closeModal('earningModal');
+            renderDashboard();
+        }
+
+        // Initializer
+        document.addEventListener('DOMContentLoaded', renderDashboard);
+        window.onclick = function(event) { if (event.target.classList.contains('modal')) { event.target.style.display = "none"; } }
+    </script>
+</body>
+</html>
